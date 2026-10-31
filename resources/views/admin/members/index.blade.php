@@ -12,7 +12,10 @@
                 </a>
             @endforeach
         </nav>
-        <a href="{{ route('admin.members.export') }}" class="btn-secondary"><x-icon name="download" class="h-4 w-4" /> Exporter (CSV)</a>
+        <div class="flex gap-2">
+            <a href="{{ route('admin.members.pdf') }}" class="btn-secondary"><x-icon name="download" class="h-4 w-4" /> Exporter (PDF)</a>
+            <a href="{{ route('admin.members.export') }}" class="btn-secondary"><x-icon name="download" class="h-4 w-4" /> Exporter (CSV)</a>
+        </div>
     </div>
 
     <form method="GET" action="{{ route('admin.members.index') }}" class="mt-4 flex gap-2">

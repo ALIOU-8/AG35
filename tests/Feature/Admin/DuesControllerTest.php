@@ -6,6 +6,7 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\DuesReminder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 class DuesControllerTest extends TestCase
@@ -150,6 +151,29 @@ class DuesControllerTest extends TestCase
 
         $this->assertStringContainsString('"Ibrahima Sow"', $csv);
         $this->assertStringContainsString(';20,00;Espèces;', $csv);
+    }
+
+    public function test_season_report_downloads_as_a_pdf_with_the_collection_figures(): void
+    {
+        $treasurer = User::factory()->bureau('Trésorière')->create(['name' => 'Fanta Camara']);
+        $this->recordedBy($treasurer, $treasurer, 20, 'Virement');
+        $this->recordedBy($treasurer, User::factory()->active()->create(['name' => 'Membre Partiel']), 5, 'Espèces');
+        User::factory()->active()->create(['name' => 'Membre Impayé']);
+        View::composer('pdf.dues', function ($view) use (&$report) {
+            $report = $view->getData();
+        });
+
+        $response = $this->actingAs($treasurer)
+            ->get(route('admin.dues.pdf', ['saison' => '2026-2027']))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertDownload('cotisations-2026-2027.pdf');
+
+        $this->assertStringStartsWith('%PDF', $response->getContent());
+        $this->assertSame(25.0, $report['stats']['collected']);
+        $this->assertSame(['Membre Impayé', 'Membre Partiel'], $report['toCollect']->pluck('name')->all());
+        $this->assertSame(2, $report['payments']->count());
+        $this->assertSame('Fanta Camara', $report['byRecorder']->sole()->recorder->name);
     }
 
     private function recordedBy(User $recorder, User $member, float $amount, string $method): void
