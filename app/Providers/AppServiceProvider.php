@@ -7,6 +7,7 @@ use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -26,6 +27,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Carbon::setLocale(config('app.locale'));
+
+        // Hébergement mutualisé : le HTTPS n'est pas toujours visible par PHP, les liens restent en https.
+        if ($this->app->isProduction()) {
+            URL::forceScheme('https');
+        }
 
         Gate::define('manage-members', fn (User $user) => $user->isActive() && $user->canManageMembers());
         Gate::define('admin', fn (User $user) => $user->isActive() && $user->isAdmin());
