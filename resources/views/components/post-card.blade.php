@@ -71,9 +71,15 @@
                 <div class="relative {{ $span }}">
                     @if ($item->isVideo())
                         <video src="{{ $item->url() }}" controls preload="metadata" playsinline class="h-full w-full bg-black {{ $media->count() > 1 ? 'object-cover' : 'max-h-[36rem]' }}"></video>
+                    @elseif ($media->count() === 1)
+                        {{-- Photo seule : affichée en entier, sur un fond flouté tiré de la photo. --}}
+                        <button type="button" @click="open({{ $imageIndex }})" class="relative block w-full overflow-hidden bg-gray-900">
+                            <img src="{{ $item->url() }}" alt="" aria-hidden="true" loading="lazy" class="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl">
+                            <img src="{{ $item->url() }}" alt="" loading="lazy" class="relative mx-auto block max-h-[36rem] w-auto max-w-full object-contain">
+                        </button>
                     @else
                         <button type="button" @click="open({{ $imageIndex }})" class="block h-full w-full">
-                            <img src="{{ $item->url() }}" alt="" loading="lazy" class="h-full w-full object-cover {{ $media->count() === 1 ? 'max-h-[36rem]' : '' }}">
+                            <img src="{{ $item->url() }}" alt="" loading="lazy" class="block h-full w-full object-cover">
                         </button>
                     @endif
                     @if ($loop->last && $media->count() > 4)
