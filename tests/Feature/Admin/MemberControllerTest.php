@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\MembershipFee;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 class MemberControllerTest extends TestCase
@@ -148,6 +149,26 @@ class MemberControllerTest extends TestCase
         $this->assertStringContainsString('Cotisation 2026-2027', $csv);
         $this->assertMatchesRegularExpression('/"Adhérent Àjour";.*;Payée;/', $csv);
         $this->assertMatchesRegularExpression('/"Adhérent Enretard";.*;"Non payée";/', $csv);
+    }
+
+    public function test_member_list_downloads_as_a_pdf_with_every_account(): void
+    {
+        $this->travelTo(now()->setDate(2026, 10, 31));
+        User::factory()->active()->create(['name' => 'Membre Actif']);
+        User::factory()->create(['name' => 'Inscription En Attente']);
+        View::composer('pdf.members', function ($view) use (&$data) {
+            $data = $view->getData();
+        });
+
+        $response = $this->actingAs(User::factory()->bureau()->create(['name' => 'Bureau Export']))
+            ->get(route('admin.members.pdf'))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertDownload('membres-ag35-2026-10-31.pdf');
+
+        $this->assertStringStartsWith('%PDF', $response->getContent());
+        $this->assertEqualsCanonicalizing(['Membre Actif', 'Inscription En Attente', 'Bureau Export'], $data['members']->pluck('name')->all());
+        $this->assertSame('2026-2027', $data['season']);
     }
 
     public function test_export_marks_partial_payments_with_the_amount_paid(): void

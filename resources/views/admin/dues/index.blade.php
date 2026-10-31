@@ -16,7 +16,8 @@
             </div>
         </form>
         <div class="flex flex-wrap gap-2">
-            <a href="{{ route('admin.dues.export', ['saison' => $season]) }}" class="btn-secondary"><x-icon name="download" class="h-4 w-4" /> Journal des paiements (CSV)</a>
+            <a href="{{ route('admin.dues.pdf', ['saison' => $season]) }}" class="btn-secondary"><x-icon name="download" class="h-4 w-4" /> Rapport PDF</a>
+            <a href="{{ route('admin.dues.export', ['saison' => $season]) }}" class="btn-secondary"><x-icon name="download" class="h-4 w-4" /> Journal (CSV)</a>
             @if ($due > 0 && $counts['a-recouvrer'] > 0)
                 <form method="POST" action="{{ route('admin.dues.remind-all') }}"
                       onsubmit="return confirm(@js('Envoyer un rappel aux membres qui n\'ont pas réglé la saison '.$season.' ? Ceux relancés ces 7 derniers jours seront ignorés.'))">
@@ -94,7 +95,7 @@
             <section class="card p-4">
                 <div class="flex items-center justify-between">
                     <h2 class="font-bold">Derniers paiements</h2>
-                    <a href="{{ route('admin.dues.export', ['saison' => $season]) }}" class="text-xs font-semibold text-brand-600 hover:underline">Tout (CSV)</a>
+                    <a href="{{ route('admin.dues.pdf', ['saison' => $season]) }}" class="text-xs font-semibold text-brand-600 hover:underline">Tout (PDF)</a>
                 </div>
                 <ul class="mt-3 divide-y divide-gray-100">
                     @foreach ($recentPayments as $payment)

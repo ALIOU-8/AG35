@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MembershipFee;
+use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\DuesReminder;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
@@ -32,15 +35,12 @@ class DuesController extends Controller
      */
     public function index(Request $request): View
     {
-        $seasons = MembershipFee::seasons();
-        $season = in_array($request->query('saison'), $seasons, true) ? $request->query('saison') : MembershipFee::currentSeason();
+        $season = self::requestedSeason($request);
         $filter = array_key_exists($request->query('statut'), self::FILTERS) ? $request->query('statut') : 'a-recouvrer';
         $search = trim((string) $request->query('q'));
-        $due = MembershipFee::dueAmount();
+        $report = self::report($season);
 
-        $members = self::membersWithPayments($season, $due);
-
-        $visible = $members
+        $visible = $report['allMembers']
             ->filter(fn (User $member) => match ($filter) {
                 'a-recouvrer' => $member->payment_status !== 'paid',
                 'paid' => $member->payment_status === 'paid',
@@ -49,41 +49,41 @@ class DuesController extends Controller
             ->filter(fn (User $member) => $search === ''
                 || str_contains(mb_strtolower($member->name.' '.$member->email), mb_strtolower($search)));
 
-        $expected = $due * $members->count();
-        $collected = (float) $members->sum('paid_amount');
-
         return view('admin.dues.index', [
+            ...$report,
             'season' => $season,
-            'seasons' => $seasons,
-            'due' => $due,
+            'seasons' => MembershipFee::seasons(),
             'filter' => $filter,
             'search' => $search,
             'members' => $visible->values(),
             'lastReminders' => self::lastReminders($season),
-            // Qui a encaissé quoi : utile pour savoir qui détient l'argent liquide.
-            'byRecorder' => MembershipFee::query()->where('season', $season)
-                ->selectRaw('recorded_by, sum(amount) as total, count(*) as payments')
-                ->groupBy('recorded_by')->orderByDesc('total')->with('recorder')->get(),
-            'byMethod' => MembershipFee::query()->where('season', $season)
-                ->selectRaw('method, sum(amount) as total, count(*) as payments')
-                ->groupBy('method')->orderByDesc('total')->get(),
             'recentPayments' => MembershipFee::with(['user', 'recorder'])->where('season', $season)
                 ->latest('paid_on')->latest('id')->limit(10)->get(),
-            'stats' => [
-                'members' => $members->count(),
-                'paid' => $members->where('payment_status', 'paid')->count(),
-                'partial' => $members->where('payment_status', 'partial')->count(),
-                'unpaid' => $members->where('payment_status', 'unpaid')->count(),
-                'expected' => $expected,
-                'collected' => $collected,
-                'rate' => $expected > 0 ? min(100, (int) round($collected / $expected * 100)) : 100,
-            ],
             'counts' => [
-                'a-recouvrer' => $members->where('payment_status', '!=', 'paid')->count(),
-                'paid' => $members->where('payment_status', 'paid')->count(),
-                'tous' => $members->count(),
+                'a-recouvrer' => $report['allMembers']->where('payment_status', '!=', 'paid')->count(),
+                'paid' => $report['stats']['paid'],
+                'tous' => $report['stats']['members'],
             ],
         ]);
+    }
+
+    /**
+     * Rapport PDF de la saison pour le bureau : synthèse, encaissements, membres à recouvrer, journal.
+     */
+    public function pdf(Request $request): Response
+    {
+        $season = self::requestedSeason($request);
+        $report = self::report($season);
+
+        return Pdf::loadView('pdf.dues', [
+            ...$report,
+            'season' => $season,
+            'association' => Setting::get('association_name'),
+            'generatedBy' => $request->user()->name,
+            'toCollect' => $report['allMembers']->where('payment_status', '!=', 'paid')->values(),
+            'payments' => MembershipFee::with(['user', 'recorder'])->where('season', $season)
+                ->orderBy('paid_on')->orderBy('id')->get(),
+        ])->setPaper('a4')->download("cotisations-{$season}.pdf");
     }
 
     public function remind(Request $request, User $user): RedirectResponse
@@ -138,7 +138,7 @@ class DuesController extends Controller
      */
     public function export(Request $request): StreamedResponse
     {
-        $season = in_array($request->query('saison'), MembershipFee::seasons(), true) ? $request->query('saison') : MembershipFee::currentSeason();
+        $season = self::requestedSeason($request);
 
         return response()->streamDownload(function () use ($season) {
             $out = fopen('php://output', 'w');
@@ -154,6 +154,47 @@ class DuesController extends Controller
 
             fclose($out);
         }, "cotisations-{$season}.csv", ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /**
+     * Chiffres communs au tableau de bord et au rapport PDF.
+     *
+     * @return array{due: float, allMembers: Collection<int, User>, stats: array<string, int|float>, byRecorder: Collection<int, MembershipFee>, byMethod: Collection<int, MembershipFee>}
+     */
+    protected static function report(string $season): array
+    {
+        $due = MembershipFee::dueAmount();
+        $members = self::membersWithPayments($season, $due);
+        $expected = $due * $members->count();
+        $collected = (float) $members->sum('paid_amount');
+
+        return [
+            'due' => $due,
+            'allMembers' => $members,
+            'stats' => [
+                'members' => $members->count(),
+                'paid' => $members->where('payment_status', 'paid')->count(),
+                'partial' => $members->where('payment_status', 'partial')->count(),
+                'unpaid' => $members->where('payment_status', 'unpaid')->count(),
+                'expected' => $expected,
+                'collected' => $collected,
+                'rate' => $expected > 0 ? min(100, (int) round($collected / $expected * 100)) : 100,
+            ],
+            // Qui a encaissé quoi : utile pour savoir qui détient l'argent liquide.
+            'byRecorder' => MembershipFee::query()->where('season', $season)
+                ->selectRaw('recorded_by, sum(amount) as total, count(*) as payments')
+                ->groupBy('recorded_by')->orderByDesc('total')->with('recorder')->get(),
+            'byMethod' => MembershipFee::query()->where('season', $season)
+                ->selectRaw('method, sum(amount) as total, count(*) as payments')
+                ->groupBy('method')->orderByDesc('total')->get(),
+        ];
+    }
+
+    protected static function requestedSeason(Request $request): string
+    {
+        $season = $request->query('saison');
+
+        return in_array($season, MembershipFee::seasons(), true) ? $season : MembershipFee::currentSeason();
     }
 
     /**

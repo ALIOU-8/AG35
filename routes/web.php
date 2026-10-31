@@ -75,6 +75,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('can:manage-members')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/membres', [Admin\MemberController::class, 'index'])->name('members.index');
         Route::get('/membres/export', [Admin\MemberController::class, 'export'])->name('members.export');
+        Route::get('/membres/pdf', [Admin\MemberController::class, 'pdf'])->name('members.pdf');
         Route::get('/membres/{user}', [Admin\MemberController::class, 'edit'])->name('members.edit');
         Route::put('/membres/{user}', [Admin\MemberController::class, 'update'])->name('members.update');
         Route::post('/membres/{user}/valider', [Admin\MemberController::class, 'approve'])->name('members.approve');
@@ -83,6 +84,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/membres/{user}/cotisations', [Admin\MembershipFeeController::class, 'store'])->name('fees.store');
         Route::get('/cotisations', [Admin\DuesController::class, 'index'])->name('dues.index');
         Route::get('/cotisations/export', [Admin\DuesController::class, 'export'])->name('dues.export');
+        Route::get('/cotisations/pdf', [Admin\DuesController::class, 'pdf'])->name('dues.pdf');
         Route::post('/cotisations/relances', [Admin\DuesController::class, 'remindAll'])->name('dues.remind-all');
         Route::post('/membres/{user}/relance', [Admin\DuesController::class, 'remind'])->name('dues.remind');
         Route::delete('/cotisations/{fee}', [Admin\MembershipFeeController::class, 'destroy'])->name('fees.destroy');

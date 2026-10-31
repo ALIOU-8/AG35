@@ -7,8 +7,10 @@ use App\Models\Conversation;
 use App\Models\MembershipFee;
 use App\Models\Setting;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -157,6 +159,32 @@ class MemberController extends Controller
 
             fclose($out);
         }, 'membres-ag35-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /**
+     * Liste des membres en PDF (paysage) avec la situation de cotisation de la saison en cours.
+     */
+    public function pdf(Request $request): Response
+    {
+        $season = MembershipFee::currentSeason();
+        $due = MembershipFee::dueAmount();
+
+        $members = User::withSum(['membershipFees as paid' => fn ($query) => $query->where('season', $season)], 'amount')
+            ->orderByRaw("case status when 'active' then 0 when 'pending' then 1 else 2 end")
+            ->orderBy('name')
+            ->get()
+            ->each(function (User $user) use ($due) {
+                $user->fee_status = MembershipFee::paymentStatus((float) $user->paid, $due);
+            });
+
+        return Pdf::loadView('pdf.members', [
+            'members' => $members,
+            'season' => $season,
+            'due' => $due,
+            'counts' => $members->countBy('status'),
+            'association' => Setting::get('association_name'),
+            'generatedBy' => $request->user()->name,
+        ])->setPaper('a4', 'landscape')->download('membres-ag35-'.now()->format('Y-m-d').'.pdf');
     }
 
     /**
