@@ -3,6 +3,7 @@
     <nav class="flex gap-1 overflow-x-auto rounded-xl bg-white p-1 text-sm font-medium shadow-sm ring-1 ring-gray-900/5">
         @foreach ([
             ['admin.members.index', 'admin.members.*', 'users', 'Membres'],
+            ['admin.dues.index', 'admin.dues.*', 'banknotes', 'Cotisations'],
             ['admin.contacts.index', 'admin.contacts.*', 'envelope', 'Messages du site'],
             ['admin.settings.edit', 'admin.settings.*', 'globe', 'Contenu du site'],
         ] as [$route, $pattern, $icon, $label])

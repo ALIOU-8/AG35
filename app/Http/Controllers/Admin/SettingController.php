@@ -21,6 +21,7 @@ class SettingController extends Controller
     {
         $rules = collect(Setting::DEFAULTS)->map(fn () => ['nullable', 'string', 'max:3000'])->all();
         $rules['contact_email'] = ['nullable', 'email', 'max:180'];
+        $rules['membership_fee'] = ['nullable', 'numeric', 'min:0', 'max:10000'];
         foreach (['facebook_url', 'instagram_url', 'whatsapp_url'] as $key) {
             $rules[$key] = ['nullable', 'url', 'max:500'];
         }

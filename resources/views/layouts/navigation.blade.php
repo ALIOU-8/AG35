@@ -104,6 +104,9 @@
                     </div>
                     <x-dropdown-link :href="route('members.show', auth()->user())">Mon profil</x-dropdown-link>
                     <x-dropdown-link :href="route('profile.edit')">Modifier mon profil</x-dropdown-link>
+                    @if (auth()->user()->isActive())
+                        <x-dropdown-link :href="route('dues.show')">Ma cotisation</x-dropdown-link>
+                    @endif
                     @can('manage-members')
                         <x-dropdown-link :href="route('admin.members.index')" class="md:hidden">Gestion des membres</x-dropdown-link>
                         <x-dropdown-link :href="route('admin.contacts.index')">Messages du site</x-dropdown-link>

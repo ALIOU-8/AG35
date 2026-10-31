@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Meeting;
+use App\Models\MembershipFee;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,6 +20,7 @@ class FeedController extends Controller
                 ->where(fn ($query) => $query->whereNull('scheduled_at')->orWhere('scheduled_at', '>=', now()->subHours(3)))
                 ->orderBy('scheduled_at')->limit(4)->get(),
             'newMembers' => User::active()->latest('approved_at')->limit(6)->get(),
+            'dues' => $request->user()->duesFor(MembershipFee::currentSeason()),
         ]);
     }
 

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\DuesController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\MemberController;
@@ -56,6 +57,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/messages/{conversation}/lu', [ConversationController::class, 'read'])->name('conversations.read');
     Route::post('/messages/{conversation}/quitter', [ConversationController::class, 'leave'])->name('conversations.leave');
 
+    Route::get('/ma-cotisation', [DuesController::class, 'show'])->name('dues.show');
+
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/tout-lu', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     Route::get('/notifications/{notification}/ouvrir', [NotificationController::class, 'open'])->name('notifications.open');
@@ -78,6 +81,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::delete('/membres/{user}', [Admin\MemberController::class, 'destroy'])->name('members.destroy');
 
         Route::post('/membres/{user}/cotisations', [Admin\MembershipFeeController::class, 'store'])->name('fees.store');
+        Route::get('/cotisations', [Admin\DuesController::class, 'index'])->name('dues.index');
+        Route::get('/cotisations/export', [Admin\DuesController::class, 'export'])->name('dues.export');
+        Route::post('/cotisations/relances', [Admin\DuesController::class, 'remindAll'])->name('dues.remind-all');
+        Route::post('/membres/{user}/relance', [Admin\DuesController::class, 'remind'])->name('dues.remind');
         Route::delete('/cotisations/{fee}', [Admin\MembershipFeeController::class, 'destroy'])->name('fees.destroy');
 
         Route::get('/contacts', [Admin\ContactMessageController::class, 'index'])->name('contacts.index');

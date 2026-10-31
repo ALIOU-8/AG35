@@ -150,6 +150,19 @@ class MemberControllerTest extends TestCase
         $this->assertMatchesRegularExpression('/"Adhérent Enretard";.*;"Non payée";/', $csv);
     }
 
+    public function test_export_marks_partial_payments_with_the_amount_paid(): void
+    {
+        $this->travelTo(now()->setDate(2026, 10, 31));
+        $member = User::factory()->active()->create(['name' => 'Adhérent Partiel']);
+        $member->membershipFees()->make(['season' => '2026-2027', 'amount' => 10, 'paid_on' => now(), 'method' => 'Espèces'])->save();
+
+        $csv = $this->actingAs(User::factory()->bureau()->create())
+            ->get(route('admin.members.export'))
+            ->streamedContent();
+
+        $this->assertMatchesRegularExpression('/"Adhérent Partiel";.*;"Partielle \\(10,00 €\\)";/', $csv);
+    }
+
     /**
      * @return array<string, mixed>
      */

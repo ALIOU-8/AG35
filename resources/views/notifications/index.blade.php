@@ -4,6 +4,7 @@
             'like' => ['heart', 'bg-guinea-red'],
             'comment' => ['comment', 'bg-brand-500'],
             'meeting' => ['video', 'bg-blue-500'],
+            'dues' => ['banknotes', 'bg-amber-500'],
         ];
     @endphp
 
