@@ -60,6 +60,15 @@ class DuesController extends Controller
             'search' => $search,
             'members' => $visible->values(),
             'lastReminders' => self::lastReminders($season),
+            // Qui a encaissé quoi : utile pour savoir qui détient l'argent liquide.
+            'byRecorder' => MembershipFee::query()->where('season', $season)
+                ->selectRaw('recorded_by, sum(amount) as total, count(*) as payments')
+                ->groupBy('recorded_by')->orderByDesc('total')->with('recorder')->get(),
+            'byMethod' => MembershipFee::query()->where('season', $season)
+                ->selectRaw('method, sum(amount) as total, count(*) as payments')
+                ->groupBy('method')->orderByDesc('total')->get(),
+            'recentPayments' => MembershipFee::with(['user', 'recorder'])->where('season', $season)
+                ->latest('paid_on')->latest('id')->limit(10)->get(),
             'stats' => [
                 'members' => $members->count(),
                 'paid' => $members->where('payment_status', 'paid')->count(),

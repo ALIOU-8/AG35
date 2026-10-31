@@ -37,13 +37,27 @@ class DuesControllerTest extends TestCase
         $this->actingAs(User::factory()->bureau()->create(['name' => 'Trésorier Bureau']))
             ->get(route('admin.dues.index'))
             ->assertOk()
-            ->assertSee('Membre Partiel')
+            ->assertViewHas('members', fn ($members) => $members->pluck('name')->all() === ['Membre Impayé', 'Membre Partiel', 'Trésorier Bureau'])
             ->assertSee('reste 10,00 €')
-            ->assertSee('Membre Impayé')
-            ->assertDontSee('Membre À Jour')
             ->assertDontSee('Inscription En Attente')
             ->assertSee('30,00 €')
             ->assertSee('38 % recouvré');
+    }
+
+    public function test_dashboard_shows_who_collected_how_much_and_by_which_means(): void
+    {
+        $treasurer = User::factory()->bureau('Trésorière')->create(['name' => 'Fanta Camara']);
+        $president = User::factory()->bureau('Président')->create(['name' => 'Alpha Bah']);
+        $this->recordedBy($treasurer, User::factory()->active()->create(['name' => 'Moussa Keita']), 20, 'Espèces');
+        $this->recordedBy($treasurer, User::factory()->active()->create(), 20, 'Espèces');
+        $this->recordedBy($president, User::factory()->active()->create(), 15, 'Virement');
+
+        $this->actingAs($treasurer)
+            ->get(route('admin.dues.index'))
+            ->assertOk()
+            ->assertSeeInOrder(['Encaissé par', 'Fanta Camara', '2 paiements', '40,00 €', 'Alpha Bah', '1 paiement', '15,00 €'])
+            ->assertSeeInOrder(['Par moyen de paiement', 'Espèces', '40,00 €', 'Virement', '15,00 €'])
+            ->assertSeeInOrder(['Derniers paiements', 'Moussa Keita', 'par Fanta Camara']);
     }
 
     public function test_up_to_date_filter_lists_members_who_paid_in_full(): void
@@ -136,6 +150,12 @@ class DuesControllerTest extends TestCase
 
         $this->assertStringContainsString('"Ibrahima Sow"', $csv);
         $this->assertStringContainsString(';20,00;Espèces;', $csv);
+    }
+
+    private function recordedBy(User $recorder, User $member, float $amount, string $method): void
+    {
+        $fee = $member->membershipFees()->make(['season' => '2026-2027', 'amount' => $amount, 'paid_on' => now(), 'method' => $method]);
+        $fee->recorder()->associate($recorder)->save();
     }
 
     private function paying(User $member, float $amount): User
