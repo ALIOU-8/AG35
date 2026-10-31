@@ -67,7 +67,7 @@
                     <li class="flex items-center justify-between gap-3 py-2.5 text-sm">
                         <span>
                             <span class="font-semibold">{{ $fee->season }}</span>
-                            <span class="block text-xs text-gray-500">{{ $fee->paid_on->translatedFormat('j F Y') }} · {{ $fee->method }}</span>
+                            <span class="block text-xs text-gray-500">{{ $fee->paid_on->translatedFormat('j F Y') }} · {{ $fee->method }}@if ($fee->recorder) · reçu par {{ $fee->recorder->name }}@endif</span>
                         </span>
                         <span class="font-semibold">{{ $money((float) $fee->amount) }}</span>
                     </li>

@@ -31,12 +31,14 @@ class DuesControllerTest extends TestCase
     {
         $this->travelTo(now()->setDate(2026, 10, 31));
         $member = User::factory()->active()->create();
-        $member->membershipFees()->make(['season' => '2026-2027', 'amount' => 20, 'paid_on' => now(), 'method' => 'Virement'])->save();
+        $fee = $member->membershipFees()->make(['season' => '2026-2027', 'amount' => 20, 'paid_on' => now(), 'method' => 'Virement']);
+        $fee->recorder()->associate(User::factory()->bureau()->create(['name' => 'Alpha Diallo']))->save();
 
         $this->actingAs($member)
             ->get(route('dues.show'))
             ->assertOk()
             ->assertSee('Cotisation réglée')
+            ->assertSee('reçu par Alpha Diallo')
             ->assertDontSee('Comment payer');
     }
 }
