@@ -55,8 +55,9 @@
                         </a>
                         <div class="flex shrink-0 items-center gap-2 sm:justify-end">
                             @if ($member->isActive())
-                                <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $member->paid_current_season ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-red-700' }}">
-                                    {{ $member->paid_current_season ? 'Cotisation '.$season.' ✓' : 'Cotisation '.$season.' due' }}
+                                @php($feeStatus = \App\Models\MembershipFee::paymentStatus((float) $member->paid_current_season, $due))
+                                <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ ['paid' => 'bg-brand-50 text-brand-700', 'partial' => 'bg-amber-50 text-amber-700', 'unpaid' => 'bg-red-50 text-red-700'][$feeStatus] }}">
+                                    Cotisation {{ $season }} {{ ['paid' => '✓', 'partial' => 'partielle', 'unpaid' => 'due'][$feeStatus] }}
                                 </span>
                             @endif
                             @unless ($member->isActive())

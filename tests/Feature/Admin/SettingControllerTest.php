@@ -40,8 +40,8 @@ class SettingControllerTest extends TestCase
     public function test_invalid_email_and_social_link_are_rejected(): void
     {
         $this->actingAs(User::factory()->bureau()->create())
-            ->put(route('admin.settings.update'), ['contact_email' => 'pas-un-email', 'facebook_url' => 'javascript:alert(1)'])
-            ->assertSessionHasErrors(['contact_email', 'facebook_url']);
+            ->put(route('admin.settings.update'), ['contact_email' => 'pas-un-email', 'facebook_url' => 'javascript:alert(1)', 'membership_fee' => 'vingt euros'])
+            ->assertSessionHasErrors(['contact_email', 'facebook_url', 'membership_fee']);
 
         $this->assertSame(Setting::DEFAULTS['contact_email'], Setting::get('contact_email'));
     }

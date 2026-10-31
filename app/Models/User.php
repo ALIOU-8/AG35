@@ -141,6 +141,25 @@ class User extends Authenticatable
             ->map(fn ($part) => Str::upper(Str::substr($part, 0, 1)))->implode('');
     }
 
+    /**
+     * Situation de la cotisation d'une saison : montant dû, déjà payé, reste à régler et statut.
+     *
+     * @return array{season: string, due: float, paid: float, remaining: float, status: string}
+     */
+    public function duesFor(string $season): array
+    {
+        $due = MembershipFee::dueAmount();
+        $paid = (float) $this->membershipFees()->where('season', $season)->sum('amount');
+
+        return [
+            'season' => $season,
+            'due' => $due,
+            'paid' => $paid,
+            'remaining' => max(0, $due - $paid),
+            'status' => MembershipFee::paymentStatus($paid, $due),
+        ];
+    }
+
     public function studies(): string
     {
         return collect([$this->field_of_study, $this->study_level])->filter()->implode(' · ');

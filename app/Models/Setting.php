@@ -32,6 +32,7 @@ class Setting extends Model
         'instagram_url' => '',
         'whatsapp_url' => '',
         'membership_fee' => '20',
+        'dues_instructions' => "Réglez votre cotisation auprès du trésorier : en espèces lors d'une réunion, par virement ou par Lydia / Wero. Indiquez votre nom et la saison en référence.",
     ];
 
     public static function get(string $key): ?string

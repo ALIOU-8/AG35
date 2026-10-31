@@ -25,6 +25,7 @@
             ],
             'Adhésion' => [
                 'membership_fee' => ['Cotisation annuelle (€)', 'text'],
+                'dues_instructions' => ['Comment payer (affiché aux membres)', 'textarea'],
             ],
         ];
     @endphp

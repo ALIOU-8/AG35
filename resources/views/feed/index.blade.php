@@ -1,6 +1,18 @@
 <x-app-layout title="Fil d'actualité">
     <div class="grid gap-5 lg:grid-cols-3">
         <div class="space-y-4 lg:col-span-2">
+            @if ($dues['due'] > 0 && $dues['status'] !== 'paid')
+                <div x-data="{ shown: true }" x-show="shown" class="flex items-center gap-3 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><x-icon name="banknotes" /></span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block font-semibold">Votre cotisation {{ $dues['season'] }} n'est pas encore réglée</span>
+                        <span class="block text-amber-800">Reste à régler : {{ number_format($dues['remaining'], 2, ',', ' ') }} €</span>
+                    </span>
+                    <a href="{{ route('dues.show') }}" class="btn-primary shrink-0 px-3 py-1.5">Comment payer</a>
+                    <button type="button" @click="shown = false" class="rounded-full p-1 text-amber-700 hover:bg-amber-100" aria-label="Masquer"><x-icon name="x" class="h-4 w-4" /></button>
+                </div>
+            @endif
+
             {{-- Nouvelle publication --}}
             <form x-data="postComposer(@js(['url' => route('posts.store')]))" @submit.prevent="submit"
                   class="card p-4" enctype="multipart/form-data">

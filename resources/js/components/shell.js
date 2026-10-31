@@ -2,7 +2,7 @@ import { playNotificationSound, showSystemNotification, subscribeToPush, unlockS
 
 const TOAST_DURATION = 7000;
 const MAX_TOASTS = 4;
-const CONTEXTS = { like: 'Publication', comment: 'Publication', meeting: 'Réunion' };
+const CONTEXTS = { like: 'Publication', comment: 'Publication', meeting: 'Réunion', dues: 'Cotisation' };
 
 const storage = {
     get(key) {

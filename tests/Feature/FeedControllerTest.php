@@ -49,6 +49,29 @@ class FeedControllerTest extends TestCase
             ->assertSee('Réunion de rentrée');
     }
 
+    public function test_feed_reminds_a_member_whose_dues_are_unpaid(): void
+    {
+        $this->travelTo(now()->setDate(2026, 10, 31));
+
+        $this->actingAs(User::factory()->active()->create())
+            ->get(route('feed'))
+            ->assertOk()
+            ->assertSee("Votre cotisation 2026-2027 n'est pas encore réglée", false)
+            ->assertSee('Reste à régler : 20,00 €');
+    }
+
+    public function test_feed_has_no_dues_banner_once_paid(): void
+    {
+        $this->travelTo(now()->setDate(2026, 10, 31));
+        $member = User::factory()->active()->create();
+        $member->membershipFees()->make(['season' => '2026-2027', 'amount' => 20, 'paid_on' => now(), 'method' => 'Espèces'])->save();
+
+        $this->actingAs($member)
+            ->get(route('feed'))
+            ->assertOk()
+            ->assertDontSee('pas encore réglée');
+    }
+
     public function test_ended_meetings_are_not_listed_in_the_feed_sidebar(): void
     {
         Meeting::factory()->ended()->create(['title' => 'Ancienne réunion']);

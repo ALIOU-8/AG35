@@ -29,7 +29,7 @@ class MemberController extends Controller
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%")
                 ->orWhere('school', 'like', "%{$search}%")))
-            ->withExists(['membershipFees as paid_current_season' => fn ($query) => $query->where('season', $season)])
+            ->withSum(['membershipFees as paid_current_season' => fn ($query) => $query->where('season', $season)], 'amount')
             ->orderByRaw("case role when 'admin' then 0 when 'bureau' then 1 else 2 end")
             ->orderBy('name')
             ->paginate(30)
@@ -40,6 +40,7 @@ class MemberController extends Controller
             'status' => $status,
             'search' => $search,
             'season' => $season,
+            'due' => MembershipFee::dueAmount(),
             'counts' => User::query()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
         ]);
     }
@@ -129,18 +130,27 @@ class MemberController extends Controller
     {
         $season = MembershipFee::currentSeason();
 
-        return response()->streamDownload(function () use ($season) {
+        $due = MembershipFee::dueAmount();
+
+        return response()->streamDownload(function () use ($season, $due) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF"); // BOM : Excel ouvre correctement les accents.
             fputcsv($out, ['Nom', 'Email', 'Téléphone', 'Établissement', 'Filière', 'Niveau', 'Ville d\'origine', 'Arrivée à Rennes', 'Rôle', 'Fonction au bureau', 'Statut', "Cotisation {$season}", 'Inscrit le'], ';');
 
-            User::withExists(['membershipFees as paid' => fn ($query) => $query->where('season', $season)])
+            User::withSum(['membershipFees as paid' => fn ($query) => $query->where('season', $season)], 'amount')
                 ->orderBy('name')
-                ->each(function (User $user) use ($out) {
+                ->each(function (User $user) use ($out, $due) {
+                    $status = MembershipFee::paymentStatus((float) $user->paid, $due);
+
                     fputcsv($out, [
                         $user->name, $user->email, $user->phone, $user->school, $user->field_of_study,
                         $user->study_level, $user->origin_city, $user->arrival_year, $user->roleLabel(),
-                        $user->bureau_title, $user->statusLabel(), $user->paid ? 'Payée' : 'Non payée',
+                        $user->bureau_title, $user->statusLabel(),
+                        match ($status) {
+                            'paid' => 'Payée',
+                            'partial' => 'Partielle ('.number_format((float) $user->paid, 2, ',', ' ').' €)',
+                            default => 'Non payée',
+                        },
                         $user->created_at->format('d/m/Y'),
                     ], ';');
                 });
